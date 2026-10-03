@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Wigglegram Bench</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -33,7 +33,7 @@ body{
 button,input,select,label{font:inherit;color:inherit}
 
 /* ---------- shell ---------- */
-.app{display:grid;grid-template-rows:auto 1fr auto;height:100%}
+.app{display:grid;grid-template-rows:auto 1fr auto;height:100%;height:100dvh}
 .topbar{
   display:flex;align-items:center;gap:12px;padding:12px 16px;
   border-bottom:3px solid var(--ink);background:var(--yellow);
@@ -47,6 +47,11 @@ button,input,select,label{font:inherit;color:inherit}
 }
 
 .middle{display:grid;grid-template-columns:1fr 312px;min-height:0}
+body.no-side .middle{grid-template-columns:1fr}
+body.no-side .side{display:none}
+body.no-strip .strip{display:none}
+.scrim{display:none;position:fixed;inset:0;background:var(--ink);opacity:.5;z-index:15}
+.scrim.on{display:block}
 .stagewrap{position:relative;min-width:0;display:grid;grid-template-rows:auto 1fr}
 .tabs{display:flex;gap:8px;padding:12px 16px;border-bottom:3px solid var(--ink);background:var(--surface)}
 .tab{
@@ -225,12 +230,59 @@ label.btn{display:inline-block}
   background:var(--yellow);border:3px solid var(--ink);box-shadow:var(--sh);
   padding:12px 16px;font-size:15px;font-weight:600;z-index:60;max-width:min(560px,90vw)}
 
-@media (max-width:900px){
-  .middle{grid-template-columns:1fr}
-  .side{position:absolute;right:0;top:0;bottom:0;width:312px;z-index:20;
-    transform:translateX(100%);transition:transform .18s ease;border-left:3px solid var(--ink)}
-  .side.open{transform:none}
-  #panelToggle{display:inline-block !important}
+/* ---------- loupe hint ---------- */
+.pinhint{
+  position:absolute;left:50%;top:16px;transform:translateX(-50%);z-index:6;
+  background:var(--violet);color:var(--surface);border:3px solid var(--ink);box-shadow:var(--sh);
+  padding:8px 16px;font-size:13px;font-weight:700;white-space:nowrap;pointer-events:none}
+.pinhint.hide{display:none}
+
+/* ---------- mobile ---------- */
+/* ---------- mobile mode ----------
+   Driven by a class, not a media query: screen width is a poor guess at
+   whether there is a mouse or a finger on the other end. The user picks. */
+body.mob{font-size:15px}
+body.mob .middle,body.mob.no-side .middle{grid-template-columns:1fr}
+body.mob .side{
+  position:fixed;right:0;top:0;bottom:0;width:min(88vw,340px);z-index:20;
+  transform:translateX(101%);transition:transform .18s ease;
+  border-left:3px solid var(--ink);display:block}
+body.mob:not(.no-side) .side{transform:none}
+body.mob.no-side .side{display:block}
+body.mob .topbar{padding:8px 12px;gap:8px;flex-wrap:wrap}
+body.mob .brand b{font-size:17px}
+body.mob .brand span{display:none}
+body.mob .tabs{padding:8px 12px;gap:4px;overflow-x:auto}
+body.mob .tabhint{display:none}
+body.mob .tab{padding:8px 12px;min-height:44px}
+body.mob .btn{min-height:44px;padding:8px 12px}
+body.mob .btn.sm{min-height:36px}
+body.mob .seg button{min-height:44px}
+body.mob .zb{min-height:44px;min-width:44px;padding:8px}
+body.mob .sect{padding:12px}
+body.mob .row label{width:68px;font-size:13px}
+body.mob .row{margin-bottom:16px}
+body.mob input[type=range]{height:44px}
+body.mob input[type=range]::-webkit-slider-thumb{width:24px;height:24px;margin-top:-10px}
+body.mob input[type=range]::-moz-range-thumb{width:24px;height:24px}
+body.mob input[type=number],body.mob input[type=text],body.mob select{min-height:44px}
+body.mob input[type=color]{width:48px;height:44px}
+body.mob .cell{width:104px}
+body.mob .cell canvas{height:68px}
+body.mob .cell .mv{display:block;width:32px;height:32px;bottom:36px}
+body.mob .cell .mv.r{left:40px}
+body.mob .strip{padding:8px 12px}
+body.mob .empty h2{font-size:21px}
+body.mob .drop{padding:24px 16px}
+body.mob .pinhint{font-size:13px;padding:8px 12px;white-space:normal;max-width:80vw;text-align:center}
+
+/* a narrow window is cramped in either mode */
+@media (max-width:420px){
+  .brand b{font-size:15px}
+  .brand span{display:none}
+  .topbar{gap:4px;flex-wrap:wrap}
+  .btn{padding:8px;font-size:13px}
+  .tabhint{display:none}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none !important}}
 </style>
@@ -244,9 +296,11 @@ label.btn{display:inline-block}
       <b>Wigglegram Bench</b>
       <span id="status">no frames loaded</span>
     </div>
-    <label class="btn" id="addBtn" for="file" tabindex="0" role="button">Add frames</label>
+    <label class="btn" id="addBtn" for="file" tabindex="0" role="button">Add</label>
     <button class="btn" id="clearBtn">Clear</button>
-    <button class="btn hide" id="panelToggle">Controls</button>
+    <button class="btn on" id="stripToggle" aria-pressed="true" title="Show or hide the filmstrip">Frames</button>
+    <button class="btn on" id="panelToggle" aria-pressed="true" title="Show or hide the controls">Controls</button>
+    <button class="btn" id="modeToggle" title="Switch between touch and mouse layouts">Mobile</button>
     <input type="file" id="file" multiple class="vh">
   </div>
 
@@ -266,6 +320,7 @@ label.btn{display:inline-block}
           <button class="zb" id="zIn" title="Zoom in">+</button>
           <button class="zb" id="zOne" title="Actual pixels">1:1</button>
         </div>
+        <div class="pinhint hide" id="pinhint"></div>
         <div class="empty on" id="empty">
           <label class="drop" id="drop" for="file">
             <h2>Drop your frames here</h2>
@@ -309,7 +364,7 @@ label.btn{display:inline-block}
           <button class="btn" id="autoBtn">Auto-align all</button>
           <button class="btn" id="resetOne">Reset frame</button>
         </div>
-        <p class="note" id="alignNote">Drag on the image to move the selected frame. Arrow keys nudge one pixel, shift for ten, alt for a quarter. Pick the point that should hold still — usually your subject's eye. Wheel to zoom in on it, space-drag to pan.</p>
+        <p class="note" id="alignNote">Drag on the photo itself to move the selected frame; dragging outside it pans the view instead. Pinch or scroll to zoom anywhere. Arrow keys nudge one pixel, shift for ten, alt for a quarter. Pin the point that should hold still, usually your subject's eye.</p>
       </div>
 
       <!-- CROP -->
@@ -338,7 +393,7 @@ label.btn{display:inline-block}
       <!-- TIMING -->
       <div class="sect" id="timeSect">
         <h3>Motion</h3>
-        <div class="row"><label>Frame hold</label><input type="range" id="ms" min="20" max="300" step="5" value="80"><span class="val" id="msV">80ms</span></div>
+        <div class="row"><label>Frame hold</label><input type="range" id="ms" min="20" max="500" step="5" value="200"><span class="val" id="msV">200ms</span></div>
         <div class="row"><label>Sequence</label>
           <div class="seg" id="seqMode">
             <button data-s="loop" aria-pressed="false">Loop</button>
@@ -401,11 +456,12 @@ label.btn{display:inline-block}
   <div class="strip" id="strip">
     <div class="striphead">
       <span class="lbl">Frames</span>
-      <span class="lbl" id="stripHint">click to select / double-click sets reference</span>
+      <span class="lbl" id="stripHint">tap to select / double-tap sets reference</span>
     </div>
     <div class="cells" id="cells"></div>
   </div>
 </div>
+<div class="scrim" id="scrim"></div>
 
 <script>
 "use strict";
@@ -426,7 +482,8 @@ const S = {
   onion: 0.55,
   pinning: false,
   pins: {},            // frameIndex -> {x,y} in image coords
-  play: {ms:80, ping:true, on:true},
+  loupe: null,         // {x,y,touch} screen px while placing a pin
+  play: {ms:200, ping:true, on:true},
   out: {w:900, aspect:0, bw:0, bc:'#f4f1ea', br:0},
   gif: {colors:256, dither:true},
   vidSec: 3,
@@ -718,6 +775,72 @@ function drawStage(){
       ctx.globalAlpha = 1;
     }
   }
+  drawLoupe();
+  ctx.restore();
+}
+
+/* Eyedropper-style loupe: a magnified disc of the frame being pinned, parked
+   clear of the pointer so a finger never covers the thing it is aiming at. */
+function drawLoupe(){
+  if(!S.pinning || S.tab !== 'align' || !S.loupe) return;
+  const f = S.frames[S.active]; if(!f) return;
+  const L = S.loupe;
+  const R = L.touch ? 84 : 72;
+  const z = Math.max(S.view.scale * 3, 6);
+  const target = toComp(L);
+
+  // park it above a finger, up-right of a cursor, then keep it on screen
+  let cx = L.touch ? L.x : L.x + R + 28;
+  let cy = L.touch ? L.y - R - 48 : L.y - R - 28;
+  if(!L.touch && cy - R < 4) cy = L.y + R + 28;
+  if(!L.touch && cx + R > S._css.w - 4) cx = L.x - R - 28;
+  if(L.touch && cy - R < 4) cy = L.y + R + 56;
+  cx = clamp(cx, R + 6, Math.max(R + 6, S._css.w - R - 6));
+  cy = clamp(cy, R + 6, Math.max(R + 6, S._css.h - R - 6));
+
+  ctx.save();
+  // hard offset shadow, matching the rest of the furniture
+  ctx.fillStyle = '#1C293C';
+  ctx.beginPath(); ctx.arc(cx + 5, cy + 5, R, 0, 7); ctx.fill();
+
+  ctx.save();
+  ctx.beginPath(); ctx.arc(cx, cy, R, 0, 7); ctx.clip();
+  ctx.fillStyle = '#C9C7C0'; ctx.fillRect(cx-R, cy-R, R*2, R*2);
+  ctx.imageSmoothingEnabled = false;
+  ctx.translate(cx - target.x*z, cy - target.y*z);
+  ctx.scale(z, z);
+  drawF(ctx, f);
+  ctx.restore();
+
+  ctx.strokeStyle = '#1C293C'; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.arc(cx, cy, R, 0, 7); ctx.stroke();
+
+  // crosshair with a clear centre, so the exact pixel stays visible
+  ctx.lineWidth = 3; ctx.strokeStyle = '#1C293C';
+  for(const pass of [0,1]){
+    if(pass){ ctx.lineWidth = 1; ctx.strokeStyle = '#FDC800'; }
+    ctx.beginPath();
+    ctx.moveTo(cx-R+8, cy); ctx.lineTo(cx-7, cy);
+    ctx.moveTo(cx+7, cy);   ctx.lineTo(cx+R-8, cy);
+    ctx.moveTo(cx, cy-R+8); ctx.lineTo(cx, cy-7);
+    ctx.moveTo(cx, cy+7);   ctx.lineTo(cx, cy+R-8);
+    ctx.stroke();
+  }
+  // the single pixel under the crosshair
+  ctx.strokeStyle = '#432DD7'; ctx.lineWidth = 2;
+  ctx.strokeRect(cx - z/2, cy - z/2, Math.max(z,2), Math.max(z,2));
+
+  // frame number badge
+  const lab = 'F' + (S.order.indexOf(S.active) + 1);
+  ctx.font = '700 13px ui-monospace,monospace';
+  const tw = ctx.measureText(lab).width;
+  ctx.fillStyle = '#FDC800';
+  ctx.fillRect(cx - tw/2 - 8, cy + R - 26, tw + 16, 20);
+  ctx.strokeStyle = '#1C293C'; ctx.lineWidth = 2;
+  ctx.strokeRect(cx - tw/2 - 8, cy + R - 26, tw + 16, 20);
+  ctx.fillStyle = '#1C293C';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(lab, cx, cy + R - 15);
   ctx.restore();
 }
 function drawF(c, f){
@@ -857,32 +980,62 @@ function pinchState(){
   const [a,b] = [...ptrs.values()];
   return {d: Math.hypot(a.x-b.x, a.y-b.y), m:{x:(a.x+b.x)/2, y:(a.y+b.y)/2}};
 }
+/* Is this composite point over the frame's own pixels? Inverting through the
+   frame transform makes rotation and scale fall out for free. */
+function insideFrame(f, cp){
+  if(!f) return false;
+  const p = invf(f, cp);
+  // a few screen pixels of grace so the very edge of the photo is still grabbable
+  const g = 3 / (S.view.scale * f.scale || 1);
+  return p.x >= -g && p.y >= -g && p.x <= iw(f) + g && p.y <= ih(f) + g;
+}
+function startPan(e, p){
+  drag = {type:'pan', last:p};
+  stage.classList.add('panning');
+  try{ stage.setPointerCapture(e.pointerId); }catch(_){}
+}
 stage.addEventListener('pointerdown', e => {
   ptrs.set(e.pointerId, evPt(e));
-  if(ptrs.size === 2 && S.tab !== 'preview'){ pinch = pinchState(); drag = null; return; }
-  if(!S.frames.length) return;
-  const p = evPt(e), cp = toComp(p);
-  if(e.button === 1 || S.panKey){
-    if(S.tab === 'preview') return;
-    e.preventDefault();
-    drag = {type:'pan', last:p};
-    stage.classList.add('panning');
-    stage.setPointerCapture(e.pointerId);
+  if(ptrs.size === 2 && S.tab !== 'preview'){
+    pinch = pinchState();
+    if(drag){ drag = null; stage.classList.remove('dragging','panning'); }
+    S.loupe = null;
     return;
   }
+  if(!S.frames.length || S.tab === 'preview') return;
+  const p = evPt(e), cp = toComp(p);
+  e.preventDefault();
+
+  if(e.button === 1 || S.panKey){ startPan(e, p); return; }
+
   if(S.tab === 'align'){
-    if(S.pinning){ setPin(cp); return; }
-    drag = {type:'move', last:cp};
-    stage.classList.add('dragging');
-    stage.setPointerCapture(e.pointerId);
+    if(S.pinning){
+      // Touch places the pin on release so the loupe can be nudged first;
+      // a mouse is precise enough to commit on the click itself.
+      if(e.pointerType === 'touch'){
+        S.loupe = {x:p.x, y:p.y, touch:true};
+        drag = {type:'pinpick'};
+        try{ stage.setPointerCapture(e.pointerId); }catch(_){}
+      } else {
+        setPin(cp);
+      }
+      return;
+    }
+    if(insideFrame(S.frames[S.active], cp)){
+      drag = {type:'move', last:cp};
+      stage.classList.add('dragging');
+      try{ stage.setPointerCapture(e.pointerId); }catch(_){}
+    } else {
+      startPan(e, p);
+    }
   } else if(S.tab === 'crop' && S.crop){
     const h = hitHandle(p);
     if(h){ drag = {type:'resize', h, start:cp, c0:{...S.crop}}; }
     else if(cp.x>=S.crop.x && cp.x<=S.crop.x+S.crop.w && cp.y>=S.crop.y && cp.y<=S.crop.y+S.crop.h){
       drag = {type:'cropmove', last:cp};
-    } else return;
+    } else { startPan(e, p); return; }
     stage.classList.add('dragging');
-    stage.setPointerCapture(e.pointerId);
+    try{ stage.setPointerCapture(e.pointerId); }catch(_){}
   }
 });
 stage.addEventListener('pointermove', e => {
@@ -898,7 +1051,14 @@ stage.addEventListener('pointermove', e => {
     pinch = now;
     return;
   }
+  // the loupe tracks the cursor while pinning, dragging or not
+  if(S.pinning && S.tab === 'align'){
+    const p = evPt(e);
+    if(drag && drag.type === 'pinpick') S.loupe = {x:p.x, y:p.y, touch:true};
+    else if(!drag && e.pointerType !== 'touch') S.loupe = {x:p.x, y:p.y, touch:false};
+  }
   if(!drag) return;
+  if(drag.type === 'pinpick') return;
   if(drag.type === 'pan'){
     const p = evPt(e);
     S.view.ox += p.x - drag.last.x;
@@ -923,11 +1083,21 @@ function endDrag(e){
   if(ptrs.size < 2) pinch = null;
   stage.classList.remove('panning');
   if(!drag) return;
+  const was = drag;
   drag = null; stage.classList.remove('dragging');
   try{ stage.releasePointerCapture(e.pointerId); }catch(_){}
+  if(was.type === 'pinpick' && S.loupe && e.type === 'pointerup'){
+    const t = toComp(S.loupe);
+    S.loupe = null;
+    setPin(t);
+  }
+  if(was.type === 'pinpick') S.loupe = null;
 }
 stage.addEventListener('pointerup', endDrag);
 stage.addEventListener('pointercancel', endDrag);
+stage.addEventListener('pointerleave', () => {
+  if(!drag && S.loupe && !S.loupe.touch) S.loupe = null;
+});
 stage.addEventListener('auxclick', e => { if(e.button === 1) e.preventDefault(); });
 stage.addEventListener('contextmenu', e => { if(S.panKey) e.preventDefault(); });
 stage.addEventListener('wheel', e => {
@@ -989,7 +1159,9 @@ function setPin(cp){
   const nextI = seq.find(i => S.pins[i] === undefined);
   if(nextI !== undefined){ S.active = nextI; buildStrip(); syncUI(); }
   else { S.pinning = false; $('pinBtn').classList.remove('on'); stage.classList.remove('picking');
+         S.loupe = null;
          toast('All frames pinned.'); }
+  showPinHint();
 }
 
 /* ---------- auto align (translation, zero-mean NCC) ---------- */
@@ -1435,11 +1607,12 @@ function setTab(t){
   $('alignSect').classList.toggle('hide', t !== 'align');
   $('cropSect').classList.toggle('hide', t !== 'crop');
   $('lookSect').classList.toggle('hide', t === 'align');
-  $('tabhint').textContent = t === 'align' ? 'wheel zooms \u00b7 space-drag pans \u00b7 arrows nudge \u00b7 1-9 pick frame'
-    : t === 'crop' ? 'drag the box or its corners \u00b7 wheel zooms'
+  $('tabhint').textContent = t === 'align' ? 'drag the photo to move it \u00b7 drag outside to pan \u00b7 wheel or pinch zooms'
+    : t === 'crop' ? 'drag the box or its corners \u00b7 drag outside to pan'
     : 'p pauses';
   $('zoombar').classList.toggle('hide', t === 'preview');
   if(t !== 'align'){ S.pinning = false; $('pinBtn').classList.remove('on'); stage.classList.remove('picking'); }
+  S.loupe = null; showPinHint();
   showCropSize();
 }
 $('tab-align').onclick = ()=>setTab('align');
@@ -1523,11 +1696,22 @@ $('pinBtn').onclick = () => {
   S.pinning = !S.pinning;
   $('pinBtn').classList.toggle('on', S.pinning);
   stage.classList.toggle('picking', S.pinning);
+  S.loupe = null;
   if(S.pinning){
     S.pins = {}; S.active = S.ref; buildStrip(); syncUI();
-    toast('Click the same detail in every frame, starting with the reference.');
   }
+  showPinHint();
 };
+function showPinHint(){
+  const el = $('pinhint');
+  el.classList.toggle('hide', !S.pinning);
+  if(!S.pinning) return;
+  const n = S.order.indexOf(S.active) + 1;
+  const touch = mobile() || matchMedia('(pointer:coarse)').matches;
+  el.textContent = (S.active === S.ref ? 'Frame ' + n + ' (reference): ' : 'Frame ' + n + ': ')
+    + (touch ? 'press and slide to the same detail, lift to place'
+             : 'click the same detail — the loupe shows the exact pixel');
+}
 $('autoBtn').onclick = autoAlign;
 $('resetOne').onclick = () => {
   const f = S.frames[S.active]; if(!f) return;
@@ -1546,7 +1730,44 @@ $('playBtn').onclick = togglePlay;
 $('gifBtn').onclick = exportGif;
 $('mp4Btn').onclick = exportVideo;
 $('pngBtn').onclick = exportPngs;
-$('panelToggle').onclick = () => $('side').classList.toggle('open');
+/* Both bars collapse. Hiding one changes the stage size, so the view is
+   refitted (or re-clamped, if the user has zoomed in) right after. */
+/* Mobile is the default layout. It is a deliberate choice rather than a
+   width breakpoint, so a tablet or a half-width window gets whichever one
+   the user actually wants. */
+const mobile = () => document.body.classList.contains('mob');
+function setMode(m){
+  document.body.classList.toggle('mob', m);
+  const b = $('modeToggle');
+  b.textContent = m ? 'Mobile' : 'Desktop';
+  b.classList.toggle('on', m);
+  b.setAttribute('aria-pressed', String(m));
+  // the side panel overlays the stage on mobile and sits beside it on desktop,
+  // so the sensible default for each differs
+  setBar('side', !m);
+  $('scrim').classList.toggle('on', barShown('side') && m);
+  showPinHint();
+  reflow();
+}
+function reflow(){
+  requestAnimationFrame(() => {
+    if(!S.frames.length){ sizeStage(); return; }
+    if(S.zoomed){ sizeStage(); clampView(); } else fitView();
+  });
+}
+function setBar(which, show){
+  document.body.classList.toggle('no-' + which, !show);
+  const btn = $(which === 'side' ? 'panelToggle' : 'stripToggle');
+  btn.classList.toggle('on', show);
+  btn.setAttribute('aria-pressed', String(show));
+  if(which === 'side') $('scrim').classList.toggle('on', show && mobile());
+  reflow();
+}
+const barShown = which => !document.body.classList.contains('no-' + which);
+$('panelToggle').onclick = () => setBar('side', !barShown('side'));
+$('stripToggle').onclick = () => setBar('strip', !barShown('strip'));
+$('scrim').onclick = () => setBar('side', false);
+$('modeToggle').onclick = () => setMode(!mobile());
 
 $('zIn').onclick = () => zoomTo(S.view.scale*1.3);
 $('zOut').onclick = () => zoomTo(S.view.scale/1.3);
@@ -1564,7 +1785,7 @@ function syncSliders(){
   $('scl').value = f.scale*100; $('sclV').textContent = (f.scale*100).toFixed(1)+'%';
 }
 function syncUI(){
-  syncSliders(); showCropSize();
+  syncSliders(); showCropSize(); showPinHint();
   const n = S.frames.length;
   const pos = S.order.indexOf(S.active) + 1;
   $('status').textContent = n ? n + ' frames \u00b7 editing ' + pos + ' \u00b7 reference ' + (S.order.indexOf(S.ref)+1) : 'no frames loaded';
@@ -1580,10 +1801,14 @@ function raf(t){
   requestAnimationFrame(raf);
 }
 window.addEventListener('resize', () => {
+  $('scrim').classList.toggle('on', barShown('side') && mobile());
   if(!S.frames.length){ sizeStage(); return; }
   if(S.zoomed){ sizeStage(); clampView(); }
   else fitView();
 });
+window.addEventListener('orientationchange', reflow);
+
+setMode(true);   // mobile layout is the default
 sizeStage();
 setTab('align');
 requestAnimationFrame(raf);
