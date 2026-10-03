@@ -46,13 +46,13 @@ button,input,select,label{font:inherit;color:inherit}
   border:2px solid var(--ink);background:var(--surface);padding:2px 8px
 }
 
-.middle{display:grid;grid-template-columns:1fr 312px;min-height:0}
+.middle{display:grid;grid-template-columns:1fr 312px;min-height:0;overflow:hidden}
 body.no-side .middle{grid-template-columns:1fr}
 body.no-side .side{display:none}
 body.no-strip .strip{display:none}
 .scrim{display:none;position:fixed;inset:0;background:var(--ink);opacity:.5;z-index:15}
 .scrim.on{display:block}
-.stagewrap{position:relative;min-width:0;display:grid;grid-template-rows:auto 1fr}
+.stagewrap{position:relative;min-width:0;min-height:0;display:grid;grid-template-rows:auto 1fr}
 .tabs{display:flex;gap:8px;padding:12px 16px;border-bottom:3px solid var(--ink);background:var(--surface)}
 .tab{
   background:var(--surface);border:3px solid var(--ink);padding:8px 16px;cursor:pointer;
@@ -67,7 +67,7 @@ body.no-strip .strip{display:none}
   margin-left:auto;align-self:center;font-family:var(--mono);font-size:13px;font-weight:500
 }
 
-.stage{position:relative;background:var(--surface);min-height:0;overflow:hidden;
+.stage{position:relative;background:var(--surface);min-height:0;min-width:0;overflow:hidden;
   background-image:radial-gradient(var(--gray) 1.5px, transparent 1.5px);
   background-size:16px 16px}
 #stage{display:block;width:100%;height:100%;touch-action:none;cursor:grab}
@@ -112,7 +112,8 @@ body.no-strip .strip{display:none}
 }
 
 /* ---------- side panel ---------- */
-.side{border-left:3px solid var(--ink);background:var(--surface);overflow-y:auto;overflow-x:hidden}
+.side{border-left:3px solid var(--ink);background:var(--surface);
+  overflow-y:auto;overflow-x:hidden;min-height:0}
 .sect{border-bottom:3px solid var(--ink);padding:16px}
 .sect h3{
   margin:0 0 12px;font-size:13px;font-weight:900;text-transform:uppercase;letter-spacing:.02em;
@@ -169,8 +170,8 @@ label.btn{display:inline-block}
 .btns{display:flex;gap:8px;flex-wrap:wrap}
 .seg{display:flex;border:3px solid var(--ink);flex:1;box-shadow:var(--sh)}
 .seg button{
-  flex:1;background:var(--surface);border:0;border-right:3px solid var(--ink);padding:8px 4px;
-  cursor:pointer;font-size:13px;font-weight:800;text-transform:uppercase}
+  flex:1 1 0;min-width:0;background:var(--surface);border:0;border-right:3px solid var(--ink);
+  padding:8px 4px;cursor:pointer;font-size:13px;font-weight:800;text-transform:uppercase}
 .seg button:last-child{border-right:0}
 .seg button:hover{background:var(--yellow)}
 .seg button[aria-pressed="true"]{background:var(--violet);color:var(--surface)}
@@ -238,43 +239,187 @@ label.btn{display:inline-block}
 .pinhint.hide{display:none}
 
 /* ---------- mobile ---------- */
-/* ---------- mobile mode ----------
-   Driven by a class, not a media query: screen width is a poor guess at
-   whether there is a mouse or a finger on the other end. The user picks. */
+/* ================================================================
+   MOBILE MODE
+   Not the desktop layout with bigger buttons: a different structure.
+   The image is full-bleed, navigation sits in the thumb zone at the
+   bottom, and the controls live in a bottom sheet with drag detents
+   so you can see the photo while you adjust it.
+   ================================================================ */
+:root{ --sheet:0px; --tabbar:0px; --safe-b:env(safe-area-inset-bottom,0px); }
+
 body.mob{font-size:15px}
-body.mob .middle,body.mob.no-side .middle{grid-template-columns:1fr}
-body.mob .side{
-  position:fixed;right:0;top:0;bottom:0;width:min(88vw,340px);z-index:20;
-  transform:translateX(101%);transition:transform .18s ease;
-  border-left:3px solid var(--ink);display:block}
-body.mob:not(.no-side) .side{transform:none}
-body.mob.no-side .side{display:block}
-body.mob .topbar{padding:8px 12px;gap:8px;flex-wrap:wrap}
-body.mob .brand b{font-size:17px}
+body.mob .app{grid-template-rows:auto 1fr}
+
+/* --- compact app bar --- */
+body.mob .topbar{padding:4px 8px 4px 12px;gap:4px;min-height:56px;
+  padding-top:env(safe-area-inset-top,0px)}
+body.mob .brand b{font-size:15px;letter-spacing:-.02em}
 body.mob .brand span{display:none}
-body.mob .tabs{padding:8px 12px;gap:4px;overflow-x:auto}
-body.mob .tabhint{display:none}
-body.mob .tab{padding:8px 12px;min-height:44px}
-body.mob .btn{min-height:44px;padding:8px 12px}
-body.mob .btn.sm{min-height:36px}
-body.mob .seg button{min-height:44px}
-body.mob .zb{min-height:44px;min-width:44px;padding:8px}
-body.mob .sect{padding:12px}
-body.mob .row label{width:68px;font-size:13px}
-body.mob .row{margin-bottom:16px}
-body.mob input[type=range]{height:44px}
-body.mob input[type=range]::-webkit-slider-thumb{width:24px;height:24px;margin-top:-10px}
-body.mob input[type=range]::-moz-range-thumb{width:24px;height:24px}
-body.mob input[type=number],body.mob input[type=text],body.mob select{min-height:44px}
-body.mob input[type=color]{width:48px;height:44px}
-body.mob .cell{width:104px}
-body.mob .cell canvas{height:68px}
-body.mob .cell .mv{display:block;width:32px;height:32px;bottom:36px}
-body.mob .cell .mv.r{left:40px}
-body.mob .strip{padding:8px 12px}
+body.mob .brand .dot{display:none}
+body.mob #stripToggle,body.mob #panelToggle,body.mob #clearBtn,
+body.mob #modeToggle{display:none}
+body.mob #moreBtn{display:inline-block;min-width:48px;font-size:21px;line-height:1;padding:4px 12px}
+#moreBtn{display:none}
+.menu{position:absolute;top:100%;right:8px;z-index:40;
+  background:var(--surface);border:3px solid var(--ink);box-shadow:var(--sh-lift);
+  display:flex;flex-direction:column;min-width:200px}
+.menu .btn{box-shadow:none;border:0;border-bottom:3px solid var(--ink);
+  text-align:left;transform:none;min-height:52px}
+.menu .btn:last-child{border-bottom:0}
+.menu .btn:hover{background:var(--yellow)}
+.menu.hide{display:none}
+body.mob .topbar{position:relative}
+body.mob .brand b{font-size:17px}
+body.mob .topbar .btn{min-height:44px;padding:8px 12px;font-size:13px}
+
+/* --- the stage owns the screen --- */
+body.mob .middle{grid-template-columns:1fr;position:relative}
+body.mob .stagewrap{grid-template-rows:1fr}
+body.mob .tabs{display:none}          /* replaced by the bottom tab bar */
+body.mob .stage{background-image:none;background:var(--gray)}
+/* pinch is the zoom control here, so the bar shrinks to a single
+   "back to fit" pill that only shows when you have zoomed away from it */
+body.mob .zoombar{left:8px;bottom:calc(var(--sheet) + var(--tabbar) + 8px);
+  transition:bottom .18s ease;display:none}
+body.mob.zoomed .zoombar{display:flex}
+body.mob #zOut,body.mob #zIn,body.mob #zOne{display:none}
+body.mob .zb.lbl{min-height:44px;min-width:88px;padding:8px 12px;font-size:13px;
+  background:var(--yellow)}
+body.mob .zb.lbl::after{content:" \2715";font-weight:900}
+
+/* --- bottom tab bar: primary navigation, in reach of a thumb --- */
+.tabbar{display:none}
+body.mob .tabbar{
+  display:grid;grid-auto-flow:column;grid-auto-columns:1fr;
+  position:fixed;left:0;right:0;bottom:0;z-index:30;
+  background:var(--surface);border-top:3px solid var(--ink);
+  padding-bottom:var(--safe-b)}
+body.mob .tabbar button{
+  background:var(--surface);border:0;border-right:3px solid var(--ink);
+  min-height:56px;cursor:pointer;font-size:13px;font-weight:800;
+  text-transform:uppercase;letter-spacing:.02em;display:flex;
+  align-items:center;justify-content:center}
+body.mob .tabbar button:last-child{border-right:0}
+body.mob .tabbar button[aria-selected="true"]{background:var(--violet);color:var(--surface)}
+
+/* --- bottom sheet --- */
+body.mob .side{
+  position:fixed;left:0;right:0;bottom:var(--tabbar);top:auto;
+  width:auto;height:var(--sheet);z-index:25;
+  background:var(--surface);border:0;border-top:3px solid var(--ink);
+  transform:none;transition:height .18s ease;
+  overflow:hidden;display:flex;flex-direction:column}
+body.mob.dragsheet .side{transition:none}
+body.mob .side.open{transform:none}
+body.mob .sheetinner{overflow-y:auto;overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;flex:1;padding-bottom:16px}
+.grip{display:none}
+body.mob .grip{
+  display:flex;align-items:center;gap:8px;padding:0 8px;
+  min-height:48px;flex:none;border-bottom:3px solid var(--ink);background:var(--yellow)}
+body.mob .ghandle{
+  flex:none;width:44px;height:44px;cursor:grab;touch-action:none;
+  display:flex;align-items:center;justify-content:center}
+body.mob .ghandle::before{content:"";width:28px;height:6px;background:var(--ink)}
+body.mob.pinning .grip{background:var(--violet);color:var(--surface)}
+body.mob.pinning .ghandle::before{background:var(--surface)}
+body.mob .gpills{display:none;gap:4px;margin-left:auto;flex:none}
+body.mob.pills .gpills{display:flex}
+body.mob #offRow{display:flex}
+body.mob.pills .glabel{display:none}
+.gpills button{
+  min-width:44px;min-height:44px;background:var(--surface);
+  border:3px solid var(--ink);cursor:pointer;font-size:13px;font-weight:900;
+  position:relative;padding:0}
+.gpills button[aria-selected="true"]{background:var(--violet);color:var(--surface)}
+.gpills button.isref::after{
+  content:"";position:absolute;top:2px;right:2px;width:7px;height:7px;background:var(--ink)}
+.gpills button[aria-selected="true"].isref::after{background:var(--surface)}
+body.mob .grip .glabel{
+  flex:1;min-width:0;font-size:13px;font-weight:900;text-transform:uppercase;
+  pointer-events:none;display:flex;justify-content:space-between;
+  align-items:center;gap:8px;overflow:hidden}
+body.mob .grip .gsub{font-weight:500;text-transform:none;opacity:.85;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+body.mob.pills .grip .glabel{display:none}
+body.mob .sect{padding:12px;border-bottom:3px solid var(--ink);
+  display:flex;flex-direction:column}
+/* at the half detent you see the top of the section, so put the controls that
+   do the work there and let the refinements sit below the fold */
+body.mob #alignSect .padstep{order:1}
+body.mob #alignSect .pad{order:2}
+body.mob #alignSect #offRow{order:3}
+body.mob #alignSect .btns{order:4}
+body.mob #alignSect .row{order:5}
+body.mob #alignSect .note{order:6}
+body.mob .sect:last-child{border-bottom:0}
+body.mob .sect h3{display:none}      /* the tab already names the section */
+body.mob .sect.titled h3{display:inline-block}
+
+/* --- touch-sized controls --- */
+body.mob .row{margin-bottom:16px;gap:12px}
+body.mob .row label{width:76px;font-size:13px}
+body.mob .btn{min-height:48px;padding:12px;font-size:13px}
+body.mob .btn.sm{min-height:44px;padding:8px 10px}
+body.mob .btns{gap:8px}
+body.mob .btns .btn{flex:1}
+body.mob .seg{box-shadow:var(--sh)}
+body.mob .seg button{min-height:48px;font-size:13px;flex:1 1 0;min-width:0}
+body.mob input[type=range]{height:48px}
+body.mob input[type=range]::-webkit-slider-runnable-track{height:12px}
+body.mob input[type=range]::-moz-range-track{height:12px}
+body.mob input[type=range]::-webkit-slider-thumb{width:32px;height:32px;margin-top:-12px}
+body.mob input[type=range]::-moz-range-thumb{width:32px;height:32px}
+body.mob input[type=number],body.mob input[type=text],body.mob select{min-height:48px;font-size:15px}
+body.mob input[type=color]{width:56px;height:48px}
+body.mob .val{min-width:60px;font-size:13px;padding:4px 6px}
+body.mob .note{font-size:13px;padding:12px}
+
+/* --- nudge pad: a slider cannot place a pixel with a thumb --- */
+.pad,.padstep,.gpills{display:none}
+body.mob .pad{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:4px;
+  width:min(260px,100%);margin:0 auto 12px}
+.pad button{
+  background:var(--surface);border:3px solid var(--ink);box-shadow:var(--sh);
+  min-height:46px;cursor:pointer;font-size:21px;font-weight:900;line-height:1;
+  display:flex;align-items:center;justify-content:center;
+  transform:translate(0,0);transition:transform 100ms ease,box-shadow 100ms ease;
+  touch-action:manipulation;-webkit-user-select:none;user-select:none}
+.pad button:active{transform:translate(2px,2px);box-shadow:var(--sh-flat);background:var(--yellow)}
+.pad button.mid{font-size:13px;text-transform:uppercase}
+.pad .sp{visibility:hidden}
+body.mob .padstep{display:flex !important;gap:8px;width:min(260px,100%);margin:0 auto 12px;align-items:center}
+body.mob .steplbl{font-size:13px;font-weight:700;flex:none}
+
+/* --- filmstrip floats above the sheet, and only where it is needed --- */
+body.mob .strip{
+  position:static;flex:none;padding:8px;border-top:0;
+  border-bottom:3px solid var(--ink);background:var(--surface)}
+body.mob .striphead{display:none}
+body.mob .cells{gap:8px;padding:0;justify-content:center}
+body.mob .cell{width:72px;box-shadow:2px 2px 0 var(--ink)}
+body.mob .cell canvas{height:48px;border-bottom:3px solid var(--ink)}
+body.mob .cell .meta{padding:2px 4px;font-size:13px;justify-content:center}
+body.mob .cell .off{display:none}
+body.mob .cell .mv{display:none}      /* reordering lives in the Motion tab */
+body.mob .cell.ref::after{font-size:13px;padding:0 2px;top:2px;right:2px}
+
+/* --- full-screen stage: hide the chrome the phone does not need --- */
+body.mob .empty{padding:16px}
 body.mob .empty h2{font-size:21px}
-body.mob .drop{padding:24px 16px}
-body.mob .pinhint{font-size:13px;padding:8px 12px;white-space:normal;max-width:80vw;text-align:center}
+body.mob .drop{padding:32px 20px}
+body.mob .pinhint{
+  font-size:13px;padding:8px 12px;white-space:normal;max-width:84vw;
+  text-align:center;top:8px}
+body.mob .toast{bottom:calc(var(--sheet) + var(--tabbar) + 16px);font-size:13px;
+  max-width:92vw}
+body.mob .scrim{display:none !important}
+body.mob .card{min-width:0;width:min(92vw,400px)}
+
+body.mob .row.desk{display:none}     /* the pad replaces these on touch */
+body.mob .pinhint{top:8px}
 
 /* a narrow window is cramped in either mode */
 @media (max-width:420px){
@@ -288,19 +433,23 @@ body.mob .pinhint{font-size:13px;padding:8px 12px;white-space:normal;max-width:8
 </style>
 </head>
 <body>
-<div class="app">
+<div class="app" id="app">
 
-  <div class="topbar">
+  <div class="topbar" id="topbar">
     <div class="brand">
-      <span class="dot"></span>
       <b>Wigglegram Bench</b>
       <span id="status">no frames loaded</span>
     </div>
     <label class="btn" id="addBtn" for="file" tabindex="0" role="button">Add</label>
     <button class="btn" id="clearBtn">Clear</button>
+    <button class="btn" id="moreBtn" aria-haspopup="true" aria-expanded="false" aria-label="More">⋯</button>
+    <div class="menu hide" id="menu" role="menu">
+      <button class="btn" id="mClear" role="menuitem">Clear frames</button>
+      <button class="btn" id="mMode" role="menuitem">Desktop layout</button>
+    </div>
     <button class="btn on" id="stripToggle" aria-pressed="true" title="Show or hide the filmstrip">Frames</button>
     <button class="btn on" id="panelToggle" aria-pressed="true" title="Show or hide the controls">Controls</button>
-    <button class="btn" id="modeToggle" title="Switch between touch and mouse layouts">Mobile</button>
+    <button class="btn" id="modeToggle">Desktop</button>
     <input type="file" id="file" multiple class="vh">
   </div>
 
@@ -309,7 +458,8 @@ body.mob .pinhint{font-size:13px;padding:8px 12px;white-space:normal;max-width:8
       <div class="tabs" role="tablist">
         <button class="tab" role="tab" id="tab-align" aria-selected="true">Align</button>
         <button class="tab" role="tab" id="tab-crop" aria-selected="false">Crop</button>
-        <button class="tab" role="tab" id="tab-preview" aria-selected="false">Preview</button>
+        <button class="tab" role="tab" id="tab-motion" aria-selected="false">Motion</button>
+        <button class="tab" role="tab" id="tab-export" aria-selected="false">Export</button>
         <span class="tabhint" id="tabhint"></span>
       </div>
       <div class="stage">
@@ -332,6 +482,12 @@ body.mob .pinhint{font-size:13px;padding:8px 12px;white-space:normal;max-width:8
     </div>
 
     <div class="side" id="side">
+      <div class="grip" id="grip">
+        <span class="ghandle" id="ghandle" role="button" tabindex="0" aria-label="Resize the controls"></span>
+        <span class="glabel"><span id="gripLabel">Align</span><span class="gsub" id="gripSub"></span></span>
+        <div class="gpills" id="gpills" role="tablist" aria-label="Frame"></div>
+      </div>
+      <div class="sheetinner" id="sheetinner">
 
       <!-- SPLIT -->
       <div class="sect hide" id="splitSect">
@@ -355,8 +511,28 @@ body.mob .pinhint{font-size:13px;padding:8px 12px;white-space:normal;max-width:8
           </div>
         </div>
         <div class="row"><label>Blend</label><input type="range" id="onion" min="10" max="100" value="55"><span class="val" id="onionV">55%</span></div>
-        <div class="row"><label>Nudge X</label><input type="range" id="tx" min="-400" max="400" value="0"><span class="val" id="txV">0</span></div>
-        <div class="row"><label>Nudge Y</label><input type="range" id="ty" min="-400" max="400" value="0"><span class="val" id="tyV">0</span></div>
+        <div class="padstep">
+          <span class="steplbl">Step</span>
+          <div class="seg" id="padStep">
+            <button data-s="0.25" aria-pressed="false">0.25</button>
+            <button data-s="1" aria-pressed="true">1</button>
+            <button data-s="10" aria-pressed="false">10</button>
+          </div>
+        </div>
+        <div class="pad" id="pad">
+          <button class="sp" disabled></button>
+          <button data-d="u" aria-label="Nudge up">&#9650;</button>
+          <button class="sp" disabled></button>
+          <button data-d="l" aria-label="Nudge left">&#9664;</button>
+          <button class="mid" data-d="0" aria-label="Reset this frame">Reset</button>
+          <button data-d="r" aria-label="Nudge right">&#9654;</button>
+          <button class="sp" disabled></button>
+          <button data-d="d" aria-label="Nudge down">&#9660;</button>
+          <button class="sp" disabled></button>
+        </div>
+        <div class="row desk"><label>Nudge X</label><input type="range" id="tx" min="-400" max="400" value="0"><span class="val" id="txV">0</span></div>
+        <div class="row desk"><label>Nudge Y</label><input type="range" id="ty" min="-400" max="400" value="0"><span class="val" id="tyV">0</span></div>
+        <div class="row hide" id="offRow"><label>Offset</label><span class="val grow" id="offV" style="text-align:left">0, 0</span></div>
         <div class="row"><label>Rotate</label><input type="range" id="rot" min="-5" max="5" step="0.05" value="0"><span class="val" id="rotV">0.00°</span></div>
         <div class="row"><label>Scale</label><input type="range" id="scl" min="90" max="110" step="0.1" value="100"><span class="val" id="sclV">100%</span></div>
         <div class="btns">
@@ -387,7 +563,7 @@ body.mob .pinhint{font-size:13px;padding:8px 12px;white-space:normal;max-width:8
           <button class="btn" id="cropOverlap">Fit to overlap</button>
           <button class="btn" id="cropFull">Full frame</button>
         </div>
-        <p class="note">Drag inside the box to move it, drag a corner to resize. Fit to overlap pulls the box in to the area every frame still covers after aligning, so no blank edges creep in.</p>
+        <p class="note" id="cropNote">Drag inside the box to move it, drag a corner to resize. Fit to overlap pulls the box in to the area every frame still covers after aligning, so no blank edges creep in.</p>
       </div>
 
       <!-- TIMING -->
@@ -450,6 +626,7 @@ body.mob .pinhint{font-size:13px;padding:8px 12px;white-space:normal;max-width:8
         <p class="note" id="expNote">GIF timing rounds to 10ms and most viewers won't go below 20ms — use the video if you want a fast wiggle. Video records in MP4 where the browser supports it, otherwise WebM.</p>
       </div>
 
+      </div>
     </div>
   </div>
 
@@ -460,6 +637,13 @@ body.mob .pinhint{font-size:13px;padding:8px 12px;white-space:normal;max-width:8
     </div>
     <div class="cells" id="cells"></div>
   </div>
+
+  <nav class="tabbar" id="tabbar" role="tablist" aria-label="Stage">
+    <button role="tab" id="mtab-align" aria-selected="true">Align</button>
+    <button role="tab" id="mtab-crop" aria-selected="false">Crop</button>
+    <button role="tab" id="mtab-motion" aria-selected="false">Motion</button>
+    <button role="tab" id="mtab-export" aria-selected="false">Export</button>
+  </nav>
 </div>
 <div class="scrim" id="scrim"></div>
 
@@ -476,8 +660,9 @@ const S = {
   active: 0,
   crop: null,          // {x,y,w,h} in composite space
   tab: 'align',
+  vtab: 'align',
   view: {scale:1, ox:0, oy:0},
-  fitScale: 1, zoomed: false, panKey: false,
+  fitScale: 1, zoomed: false, panKey: false, sheetPx: 0,
   viewMode: 'onion',
   onion: 0.55,
   pinning: false,
@@ -581,7 +766,7 @@ async function loadFiles(list){
   S.ref = 0; S.active = Math.min(1, S.frames.length-1);
   S.pins = {};
   S.crop = null;
-  fitView(); resetCropFull(); buildStrip(); syncUI();
+  fitView(); resetCropFull(); buildStrip(); syncUI(); setTab(S.vtab);
   $('empty').classList.remove('on'); $('empty').style.display = 'none';
   $('splitSect').classList.toggle('hide', S.frames.length !== 1);
   if(S.frames.length === 1) toast('One image loaded — slice it into frames in the panel, or add more files.');
@@ -625,14 +810,27 @@ function sizeStage(){
   ctx.setTransform(dpr,0,0,dpr,0,0);
   S._css = {w:r.width, h:r.height};
 }
+/* On a phone the sheet, filmstrip and tab bar float over the stage, so the
+   canvas never resizes as the sheet moves. Instead the image is fitted and
+   centred inside whatever rectangle is still visible. */
+function visibleRect(){
+  const w = S._css.w, h = S._css.h;
+  if(!mobile()) return {x:0, y:0, w, h};
+  const px = el => { const e = $(el); return e && !e.classList.contains('hide') ? e.offsetHeight : 0; };
+  // the sheet's height is animated, so trust the target we set, not the live
+  // mid-transition measurement
+  const bottom = px('tabbar') + (S.sheetPx || 0);
+  return {x:0, y:0, w, h: Math.max(80, h - bottom)};
+}
 function fitView(){
   sizeStage();
   const c = comp(); if(!c.w) return;
-  const pad = 46;
-  const s = Math.min((S._css.w-pad)/c.w, (S._css.h-pad)/c.h);
+  const r = visibleRect();
+  const pad = mobile() ? 20 : 46;
+  const s = Math.min((r.w-pad)/c.w, (r.h-pad)/c.h);
   S.view.scale = s; S.fitScale = s; S.zoomed = false;
-  S.view.ox = (S._css.w - c.w*s)/2;
-  S.view.oy = (S._css.h - c.h*s)/2;
+  S.view.ox = r.x + (r.w - c.w*s)/2;
+  S.view.oy = r.y + (r.h - c.h*s)/2;
   showZoom();
 }
 function zoomAt(px, py, factor){
@@ -648,19 +846,22 @@ function zoomAt(px, py, factor){
   clampView(); showZoom();
 }
 function zoomTo(scale){
-  zoomAt(S._css.w/2, S._css.h/2, scale / S.view.scale);
+  const r = visibleRect();
+  zoomAt(r.x + r.w/2, r.y + r.h/2, scale / S.view.scale);
 }
 function clampView(){
   const c = comp(); if(!c.w) return;
+  const r = visibleRect();
   const w = c.w*S.view.scale, h = c.h*S.view.scale;
   const cx = S.view.ox + w/2, cy = S.view.oy + h/2;
-  S.view.ox += clamp(cx, 0, S._css.w) - cx;
-  S.view.oy += clamp(cy, 0, S._css.h) - cy;
+  S.view.ox += clamp(cx, r.x, r.x + r.w) - cx;
+  S.view.oy += clamp(cy, r.y, r.y + r.h) - cy;
 }
 function showZoom(){
   const el = $('zLabel'); if(!el) return;
-  el.textContent = (!S.zoomed || Math.abs(S.view.scale - (S.fitScale||1)) < 1e-6)
-    ? 'Fit' : Math.round(S.view.scale*100) + '%';
+  const atFit = !S.zoomed || Math.abs(S.view.scale - (S.fitScale||1)) < 1e-6;
+  el.textContent = atFit ? 'Fit' : Math.round(S.view.scale*100) + '%';
+  document.body.classList.toggle('zoomed', !atFit);
 }
 const toScreen = p => ({x: p.x*S.view.scale + S.view.ox, y: p.y*S.view.scale + S.view.oy});
 const toComp  = p => ({x: (p.x - S.view.ox)/S.view.scale, y: (p.y - S.view.oy)/S.view.scale});
@@ -744,12 +945,14 @@ function drawStage(){
       ctx.globalAlpha = 1;
       ctx.fillStyle = '#FDC800';
       ctx.strokeStyle = '#1C293C'; ctx.lineWidth = 2;
+      const hs = mobile() ? 11 : 5;      // visually match the touch target
       for(const hd of handles()){
         const p = toScreen(hd);
-        ctx.fillRect(p.x-5, p.y-5, 10, 10);
-        ctx.strokeRect(p.x-5, p.y-5, 10, 10);
+        ctx.fillRect(p.x-hs, p.y-hs, hs*2, hs*2);
+        ctx.strokeRect(p.x-hs, p.y-hs, hs*2, hs*2);
       }
-    } else {
+    } else if(S.crop.w < c.w - 1 || S.crop.h < c.h - 1){
+      // drawing it at full frame would just outline the photo for no reason
       ctx.setLineDash([8,6]); ctx.strokeStyle = '#432DD7'; ctx.lineWidth = 3;
       ctx.strokeRect(a.x+.5, a.y+.5, cw, chh);
       ctx.setLineDash([]);
@@ -795,8 +998,9 @@ function drawLoupe(){
   if(!L.touch && cy - R < 4) cy = L.y + R + 28;
   if(!L.touch && cx + R > S._css.w - 4) cx = L.x - R - 28;
   if(L.touch && cy - R < 4) cy = L.y + R + 56;
-  cx = clamp(cx, R + 6, Math.max(R + 6, S._css.w - R - 6));
-  cy = clamp(cy, R + 6, Math.max(R + 6, S._css.h - R - 6));
+  const vr = visibleRect();
+  cx = clamp(cx, vr.x + R + 6, Math.max(vr.x + R + 6, vr.x + vr.w - R - 6));
+  cy = clamp(cy, vr.y + R + 6, Math.max(vr.y + R + 6, vr.y + vr.h - R - 6));
 
   ctx.save();
   // hard offset shadow, matching the rest of the furniture
@@ -954,12 +1158,40 @@ function buildStrip(){
     box.appendChild(el);
   });
 }
+function buildPills(){
+  const box = $('gpills'); if(!box) return;
+  box.innerHTML = '';
+  if(S.vtab !== 'align') return;
+  S.order.forEach((fi, pos) => {
+    const b = document.createElement('button');
+    b.textContent = String(pos+1);
+    b.setAttribute('role','tab');
+    b.setAttribute('aria-selected', String(fi === S.active));
+    b.setAttribute('aria-label', 'Frame ' + (pos+1) + (fi === S.ref ? ', reference' : ''));
+    if(fi === S.ref) b.classList.add('isref');
+    b.onclick = () => { S.active = fi; buildStrip(); syncUI(); };
+    // a long press makes it the reference, the touch equivalent of double-click
+    let lp = null;
+    b.addEventListener('pointerdown', () => {
+      lp = setTimeout(() => { S.ref = fi; buildStrip(); syncUI();
+        toast('Frame ' + (pos+1) + ' is now the reference.'); }, 600);
+    });
+    ['pointerup','pointercancel','pointerleave'].forEach(k =>
+      b.addEventListener(k, () => clearTimeout(lp)));
+    box.appendChild(b);
+  });
+}
 function move(pos, dir){
   const j = pos + dir; if(j < 0 || j >= S.order.length) return;
   const t = S.order[pos]; S.order[pos] = S.order[j]; S.order[j] = t;
   buildStrip();
 }
 function refreshOffsets(){
+  const f0 = S.frames[S.active];
+  if(f0){
+    const r = v => Math.abs(v) < 0.01 ? '0' : (Math.round(v*100)/100);
+    $('offV').textContent = r(f0.tx) + ', ' + r(f0.ty);
+  }
   const cells = $('cells').children;
   S.order.forEach((fi,pos)=>{
     const f = S.frames[fi], el = cells[pos];
@@ -1159,6 +1391,7 @@ function setPin(cp){
   const nextI = seq.find(i => S.pins[i] === undefined);
   if(nextI !== undefined){ S.active = nextI; buildStrip(); syncUI(); }
   else { S.pinning = false; $('pinBtn').classList.remove('on'); stage.classList.remove('picking');
+         document.body.classList.remove('pinning');
          S.loupe = null;
          toast('All frames pinned.'); }
   showPinHint();
@@ -1292,11 +1525,17 @@ function handles(){
   ];
 }
 function hitHandle(p){
+  const tol = mobile() ? 24 : 8;
+  let best = null, bd = Infinity;
   for(const h of handles()){
     const s = toScreen(h);
-    if(Math.abs(s.x-p.x) <= 8 && Math.abs(s.y-p.y) <= 8) return h.k;
+    const dx = Math.abs(s.x-p.x), dy = Math.abs(s.y-p.y);
+    if(dx <= tol && dy <= tol){
+      const d = dx*dx + dy*dy;
+      if(d < bd){ bd = d; best = h.k; }   // nearest wins where targets overlap
+    }
   }
-  return null;
+  return best;
 }
 function resizeCrop(d, cp){
   const c0 = d.c0, k = d.h;
@@ -1497,7 +1736,7 @@ async function exportGif(){
   const cs = Math.max(2, Math.round(S.play.ms/10));
   const bytes = buildGif(quant, d.W, d.H, cs, P.pal, 0);
   prog.close();
-  save(new Blob([bytes], {type:'image/gif'}), 'wigglegram.gif');
+  await save(new Blob([bytes], {type:'image/gif'}), 'wigglegram.gif');
   const real = cs*10;
   if(Math.abs(real - S.play.ms) > 4) toast('Saved. GIF holds each frame ' + real + 'ms (the format works in 10ms steps).');
 }
@@ -1550,7 +1789,7 @@ async function exportVideo(){
   await done;
   prog.close();
   const ext = mime.includes('mp4') ? 'mp4' : 'webm';
-  save(new Blob(chunks, {type: mime}), 'wigglegram.' + ext);
+  await save(new Blob(chunks, {type: mime}), 'wigglegram.' + ext);
   if(ext === 'webm') toast('Saved as WebM — this browser has no MP4 recorder. Chrome will give you MP4.');
 }
 async function exportPngs(){
@@ -1562,12 +1801,26 @@ async function exportPngs(){
     c.setTransform(1,0,0,1,0,0);
     renderOut(c, d, S.order[i]);
     const blob = await new Promise(r => cv.toBlob(r, 'image/png'));
-    save(blob, 'wiggle-' + String(i+1).padStart(2,'0') + '.png');
+    await save(blob, 'wiggle-' + String(i+1).padStart(2,'0') + '.png');
     await new Promise(r => setTimeout(r, 250));
   }
   toast('Saved ' + S.order.length + ' aligned frames.');
 }
-function save(blob, name){
+/* On a phone a download lands somewhere awkward, so offer the share sheet
+   first: that is the route to Photos, Messages or an upload. Falls back to a
+   normal download wherever sharing files is not supported. */
+async function save(blob, name){
+  if(mobile() && navigator.canShare){
+    try{
+      const file = new File([blob], name, {type: blob.type});
+      if(navigator.canShare({files:[file]})){
+        await navigator.share({files:[file], title:'Wigglegram'});
+        return;
+      }
+    }catch(err){
+      if(err && err.name === 'AbortError') return;   // the user dismissed it
+    }
+  }
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob); a.download = name;
   document.body.appendChild(a); a.click(); a.remove();
@@ -1601,23 +1854,55 @@ function toast(msg, ms){
 /* ================================================================
    UI wiring
    ================================================================ */
-function setTab(t){
-  S.tab = t;
-  ['align','crop','preview'].forEach(k => $('tab-'+k).setAttribute('aria-selected', String(k===t)));
-  $('alignSect').classList.toggle('hide', t !== 'align');
-  $('cropSect').classList.toggle('hide', t !== 'crop');
-  $('lookSect').classList.toggle('hide', t === 'align');
-  $('tabhint').textContent = t === 'align' ? 'drag the photo to move it \u00b7 drag outside to pan \u00b7 wheel or pinch zooms'
-    : t === 'crop' ? 'drag the box or its corners \u00b7 drag outside to pan'
-    : 'p pauses';
-  $('zoombar').classList.toggle('hide', t === 'preview');
-  if(t !== 'align'){ S.pinning = false; $('pinBtn').classList.remove('on'); stage.classList.remove('picking'); }
-  S.loupe = null; showPinHint();
+/* One view model for both layouts. The view decides what the stage draws AND
+   which controls are on offer, so the panel never shows settings for a task
+   you are not doing. */
+const VIEWS = {
+  align:  {stage:'align',   label:'Align',  strip:true,  mStrip:false},
+  crop:   {stage:'crop',    label:'Crop',   strip:true,  mStrip:false},
+  motion: {stage:'preview', label:'Motion', strip:true,  mStrip:false},
+  export: {stage:'preview', label:'Export', strip:false, mStrip:false}
+};
+function setTab(v){
+  if(!VIEWS[v]) v = 'align';
+  S.vtab = v;
+  const V = VIEWS[v];
+  S.tab = V.stage;
+
+  for(const k in VIEWS){
+    const d = $('tab-'+k), m = $('mtab-'+k);
+    if(d) d.setAttribute('aria-selected', String(k===v));
+    if(m) m.setAttribute('aria-selected', String(k===v));
+  }
+  $('alignSect').classList.toggle('hide', v !== 'align');
+  $('cropSect').classList.toggle('hide', v !== 'crop');
+  $('timeSect').classList.toggle('hide', v !== 'motion');
+  $('lookSect').classList.toggle('hide', v !== 'export');
+  $('expSect').classList.toggle('hide', v !== 'export');
+  $('gripLabel').textContent = V.label;
+  showGripSub();
+
+  const wantStrip = mobile() ? V.mStrip : V.strip;
+  $('strip').classList.toggle('hide', !wantStrip || !S.frames.length);
+  document.body.classList.toggle('pills', v === 'align' && S.frames.length > 0);
+  buildPills();
+  if(mobile()) setSheet(sheetIdx, true);
+
+  $('tabhint').textContent = v === 'align' ? 'drag the photo to move it \u00b7 drag outside to pan \u00b7 wheel or pinch zooms'
+    : v === 'crop' ? 'drag the box or its corners \u00b7 drag outside to pan'
+    : 'p pauses \u00b7 this is what you will get';
+  $('zoombar').classList.toggle('hide', V.stage === 'preview');
+  if(v !== 'align'){ S.pinning = false; $('pinBtn').classList.remove('on');
+    stage.classList.remove('picking'); document.body.classList.remove('pinning'); }
+  S.loupe = null; showPinHint(); showHelp();
   showCropSize();
+  reflow();
 }
-$('tab-align').onclick = ()=>setTab('align');
-$('tab-crop').onclick = ()=>setTab('crop');
-$('tab-preview').onclick = ()=>setTab('preview');
+for(const k in VIEWS){
+  const d = $('tab-'+k); if(d) d.onclick = () => setTab(k);
+  const m = $('mtab-'+k);
+  if(m) m.onclick = () => { setTab(k); if(sheetAt() === 0) setSheet(1); };
+}
 
 $('addBtn').onkeydown = e => {
   if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); e.stopPropagation(); $('file').click(); }
@@ -1696,16 +1981,29 @@ $('pinBtn').onclick = () => {
   S.pinning = !S.pinning;
   $('pinBtn').classList.toggle('on', S.pinning);
   stage.classList.toggle('picking', S.pinning);
+  document.body.classList.toggle('pinning', S.pinning);
   S.loupe = null;
   if(S.pinning){
     S.pins = {}; S.active = S.ref; buildStrip(); syncUI();
   }
   showPinHint();
 };
+function showHelp(){
+  const m = mobile();
+  $('alignNote').textContent = m
+    ? 'One finger on the photo moves the selected frame. Two fingers pan and zoom, at any magnification. Use the pad for single pixels, and pin a point \u2014 usually an eye \u2014 to lock every frame to the same spot.'
+    : 'Drag on the photo itself to move the selected frame; dragging outside it pans the view instead. Pinch or scroll to zoom anywhere. Arrow keys nudge one pixel, shift for ten, alt for a quarter. Pin the point that should hold still, usually your subject\u2019s eye.';
+  $('cropNote').textContent = m
+    ? 'Drag the box or a corner to resize. Two fingers still pan and zoom. Fit to overlap pulls the box in to the area every frame covers once aligned, so no blank edges creep in.'
+    : 'Drag inside the box to move it, drag a corner to resize. Fit to overlap pulls the box in to the area every frame still covers after aligning, so no blank edges creep in.';
+}
 function showPinHint(){
   const el = $('pinhint');
-  el.classList.toggle('hide', !S.pinning);
-  if(!S.pinning) return;
+  // on a phone the banner would sit on top of the very detail you are aiming
+  // at, so the grip carries the prompt instead
+  el.classList.toggle('hide', !S.pinning || mobile());
+  showGripSub();
+  if(!S.pinning || mobile()) return;
   const n = S.order.indexOf(S.active) + 1;
   const touch = mobile() || matchMedia('(pointer:coarse)').matches;
   el.textContent = (S.active === S.ref ? 'Frame ' + n + ' (reference): ' : 'Frame ' + n + ': ')
@@ -1736,38 +2034,179 @@ $('pngBtn').onclick = exportPngs;
    width breakpoint, so a tablet or a half-width window gets whichever one
    the user actually wants. */
 const mobile = () => document.body.classList.contains('mob');
+
+/* ---------- bottom sheet ----------
+   Three detents: peeking (just the grip), half, and most of the screen.
+   Drag the grip to size it, tap to cycle. The image refits to what is left
+   visible, so the photo is never hidden behind the controls. */
+const GRIP = 44;
+const MIN_IMAGE = 150;        // the photo never gets squeezed out of existence
+let sheetIdx = 1;
+function detents(){
+  const h = window.innerHeight || 700;
+  const top = ($('topbar') ? $('topbar').offsetHeight : 56) + ($('tabbar').offsetHeight || 56);
+  const peek = ($('grip').offsetHeight || GRIP);
+  const cap = Math.max(peek + 40, h - top - MIN_IMAGE);
+  // the middle detent is measured from the controls this tab actually needs,
+  // rather than a percentage that clips on a short screen
+  let want = Math.round(h*0.44);
+  const inner = $('sheetinner'), sect = inner && inner.querySelector('.sect:not(.hide)');
+  if(sect){
+    // enough to reach the pad (or the whole section where there is no pad);
+    // anything past that is a short scroll away rather than a taller sheet
+    const prim = sect.querySelector('.pad') || sect;
+    if(prim){
+      const ir = inner.getBoundingClientRect(), pr = prim.getBoundingClientRect();
+      const need = (pr.bottom - ir.top) + inner.scrollTop + 12;
+      if(need > 40) want = Math.round(peek + need);
+    }
+  }
+  return [peek, clamp(want, peek, cap), cap];
+}
+const sheetAt = () => sheetIdx;
+function applySheet(px){
+  S.sheetPx = Math.round(px);
+  document.documentElement.style.setProperty('--sheet', S.sheetPx+'px');
+}
+function setSheet(i, quiet){
+  const d = detents();
+  sheetIdx = clamp(i, 0, d.length-1);
+  applySheet(d[sheetIdx]);
+  $('grip').setAttribute('aria-expanded', String(sheetIdx > 0));
+  if(!quiet) reflow();
+}
+function syncTabbarVar(){
+  document.documentElement.style.setProperty('--tabbar',
+    (mobile() ? ($('tabbar').offsetHeight || 56) : 0) + 'px');
+}
+(function gripDrag(){
+  const g = $('ghandle');
+  let st = null;
+  g.addEventListener('pointerdown', e => {
+    if(!mobile()) return;
+    e.preventDefault();
+    const d = detents();
+    st = {y:e.clientY, h:d[sheetIdx], moved:false};
+    document.body.classList.add('dragsheet');
+    try{ g.setPointerCapture(e.pointerId); }catch(_){}
+  });
+  g.addEventListener('pointermove', e => {
+    if(!st) return;
+    const dy = st.y - e.clientY;
+    if(Math.abs(dy) > 4) st.moved = true;
+    const d = detents();
+    applySheet(clamp(st.h + dy, GRIP, d[d.length-1]));
+    reflowNow();
+  });
+  const up = e => {
+    if(!st) return;
+    const d = detents(), cur = S.sheetPx;
+    document.body.classList.remove('dragsheet');
+    try{ g.releasePointerCapture(e.pointerId); }catch(_){}
+    if(!st.moved){                     // a tap cycles through the detents
+      setSheet((sheetIdx + 1) % d.length);
+    } else {                           // a drag snaps to the nearest
+      let best = 0;
+      d.forEach((v,i) => { if(Math.abs(v-cur) < Math.abs(d[best]-cur)) best = i; });
+      setSheet(best);
+    }
+    st = null;
+  };
+  g.addEventListener('pointerup', up);
+  g.addEventListener('pointercancel', up);
+  g.addEventListener('keydown', e => {
+    if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); setSheet((sheetIdx+1) % detents().length); }
+    if(e.key === 'ArrowUp'){ e.preventDefault(); setSheet(sheetIdx+1); }
+    if(e.key === 'ArrowDown'){ e.preventDefault(); setSheet(sheetIdx-1); }
+  });
+})();
+
+/* ---------- nudge pad ----------
+   A range slider cannot place a single pixel with a thumb on it. Tap to
+   step, hold to repeat, with an explicit step size. */
+let padStep = 1;
+document.querySelectorAll('#padStep button').forEach(b => b.onclick = () => {
+  padStep = parseFloat(b.dataset.s);
+  document.querySelectorAll('#padStep button').forEach(x => x.setAttribute('aria-pressed', String(x===b)));
+});
+function nudge(dir){
+  const f = S.frames[S.active]; if(!f) return;
+  if(dir === '0'){ f.tx = 0; f.ty = 0; f.rot = 0; f.scale = 1; delete S.pins[S.active]; }
+  else if(dir === 'l') f.tx -= padStep;
+  else if(dir === 'r') f.tx += padStep;
+  else if(dir === 'u') f.ty -= padStep;
+  else if(dir === 'd') f.ty += padStep;
+  syncSliders(); refreshOffsets();
+}
+document.querySelectorAll('#pad button[data-d]').forEach(b => {
+  let t = null, rep = null;
+  const stop = () => { clearTimeout(t); clearInterval(rep); t = rep = null; };
+  b.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    nudge(b.dataset.d);
+    if(b.dataset.d === '0') return;
+    t = setTimeout(() => { rep = setInterval(() => nudge(b.dataset.d), 60); }, 340);
+    try{ b.setPointerCapture(e.pointerId); }catch(_){}
+  });
+  ['pointerup','pointercancel','pointerleave'].forEach(k => b.addEventListener(k, stop));
+});
 function setMode(m){
   document.body.classList.toggle('mob', m);
   const b = $('modeToggle');
-  b.textContent = m ? 'Mobile' : 'Desktop';
-  b.classList.toggle('on', m);
-  b.setAttribute('aria-pressed', String(m));
-  // the side panel overlays the stage on mobile and sits beside it on desktop,
-  // so the sensible default for each differs
-  setBar('side', !m);
-  $('scrim').classList.toggle('on', barShown('side') && m);
-  showPinHint();
+  // the label names where the button takes you, not where you already are
+  b.textContent = m ? 'Desktop' : 'Mobile';
+  b.title = m ? 'Switch to the desktop layout' : 'Switch to the touch layout';
+  b.classList.remove('on');
+  b.setAttribute('aria-pressed', String(!m));
+  const strip = $('strip');
+  if(m){
+    document.body.classList.remove('no-side','no-strip');
+    // the filmstrip lives inside the sheet on a phone, so it costs no extra band
+    $('side').insertBefore(strip, $('sheetinner'));
+    syncTabbarVar();
+    setSheet(1, true);
+  } else {
+    $('app').insertBefore(strip, $('tabbar'));
+    applySheet(0);
+    document.documentElement.style.setProperty('--tabbar','0px');
+    setBar('side', true, true);
+  }
+  $('scrim').classList.remove('on');
+  setTab(S.vtab || 'align');
+  showPinHint(); showHelp();
   reflow();
 }
-function reflow(){
-  requestAnimationFrame(() => {
-    if(!S.frames.length){ sizeStage(); return; }
-    if(S.zoomed){ sizeStage(); clampView(); } else fitView();
-  });
+function reflowNow(){
+  if(!S.frames.length){ sizeStage(); return; }
+  if(S.zoomed){ sizeStage(); clampView(); } else fitView();
 }
-function setBar(which, show){
+function reflow(){ requestAnimationFrame(reflowNow); }
+function setBar(which, show, quiet){
   document.body.classList.toggle('no-' + which, !show);
   const btn = $(which === 'side' ? 'panelToggle' : 'stripToggle');
   btn.classList.toggle('on', show);
   btn.setAttribute('aria-pressed', String(show));
-  if(which === 'side') $('scrim').classList.toggle('on', show && mobile());
-  reflow();
+  if(!quiet) reflow();
 }
 const barShown = which => !document.body.classList.contains('no-' + which);
 $('panelToggle').onclick = () => setBar('side', !barShown('side'));
 $('stripToggle').onclick = () => setBar('strip', !barShown('strip'));
 $('scrim').onclick = () => setBar('side', false);
 $('modeToggle').onclick = () => setMode(!mobile());
+
+/* overflow menu: keeps the app bar to a single row on a phone */
+function closeMenu(){ $('menu').classList.add('hide'); $('moreBtn').setAttribute('aria-expanded','false'); }
+$('moreBtn').onclick = e => {
+  e.stopPropagation();
+  const open = $('menu').classList.toggle('hide');
+  $('moreBtn').setAttribute('aria-expanded', String(!open));
+  $('mMode').textContent = mobile() ? 'Desktop layout' : 'Touch layout';
+};
+document.addEventListener('click', e => {
+  if(!$('menu').classList.contains('hide') && !$('menu').contains(e.target)) closeMenu();
+});
+$('mClear').onclick = () => { closeMenu(); $('clearBtn').click(); };
+$('mMode').onclick = () => { closeMenu(); setMode(!mobile()); };
 
 $('zIn').onclick = () => zoomTo(S.view.scale*1.3);
 $('zOut').onclick = () => zoomTo(S.view.scale/1.3);
@@ -1784,8 +2223,17 @@ function syncSliders(){
   $('rot').value = f.rot; $('rotV').textContent = f.rot.toFixed(2)+'\u00b0';
   $('scl').value = f.scale*100; $('sclV').textContent = (f.scale*100).toFixed(1)+'%';
 }
+function showGripSub(){
+  const el = $('gripSub'); if(!el) return;
+  const n = S.frames.length;
+  el.textContent = !n ? '' :
+    S.pinning ? 'tap the same detail \u00b7 frame ' + (S.order.indexOf(S.active)+1) + ' of ' + n :
+    S.vtab === 'align' ? 'frame ' + (S.order.indexOf(S.active)+1) + ' of ' + n :
+    S.vtab === 'motion' ? S.play.ms + 'ms \u00b7 ' + (S.play.ping ? 'bounce' : 'loop') :
+    S.vtab === 'export' ? (S.crop ? Math.round(S.crop.w) + '\u00d7' + Math.round(S.crop.h) : '') : '';
+}
 function syncUI(){
-  syncSliders(); showCropSize(); showPinHint();
+  syncSliders(); showCropSize(); showPinHint(); showGripSub(); buildPills();
   const n = S.frames.length;
   const pos = S.order.indexOf(S.active) + 1;
   $('status').textContent = n ? n + ' frames \u00b7 editing ' + pos + ' \u00b7 reference ' + (S.order.indexOf(S.ref)+1) : 'no frames loaded';
@@ -1801,10 +2249,8 @@ function raf(t){
   requestAnimationFrame(raf);
 }
 window.addEventListener('resize', () => {
-  $('scrim').classList.toggle('on', barShown('side') && mobile());
-  if(!S.frames.length){ sizeStage(); return; }
-  if(S.zoomed){ sizeStage(); clampView(); }
-  else fitView();
+  if(mobile()){ syncTabbarVar(); setSheet(sheetIdx, true); }
+  reflowNow();
 });
 window.addEventListener('orientationchange', reflow);
 
