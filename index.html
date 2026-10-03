@@ -643,7 +643,7 @@ body.mob .pinhint{top:8px}
           <button class="btn go" id="mp4Btn">Export video</button>
           <button class="btn" id="pngBtn">Save frames</button>
         </div>
-        <p class="note" id="expNote">GIF timing rounds to 10ms and most viewers won't go below 20ms — use the video if you want a fast wiggle. Video records in MP4 where the browser supports it, otherwise WebM.</p>
+        <p class="note" id="expNote">Exports save straight to your downloads. On a phone a Share button appears afterwards for sending to Photos or Messages. GIF timing rounds to 10ms and most viewers won't go below 20ms, so use the video for a fast wiggle.</p>
       </div>
 
       </div>
@@ -1761,9 +1761,12 @@ async function exportGif(){
   const cs = Math.max(2, Math.round(S.play.ms/10));
   const bytes = buildGif(quant, d.W, d.H, cs, P.pal, 0);
   prog.close();
-  await save(new Blob([bytes], {type:'image/gif'}), 'wigglegram.gif');
+  const saved = save(new Blob([bytes], {type:'image/gif'}), 'wigglegram.gif');
   const real = cs*10;
-  if(Math.abs(real - S.play.ms) > 4) toast('Saved. GIF holds each frame ' + real + 'ms (the format works in 10ms steps).');
+  if(Math.abs(real - S.play.ms) > 4){
+    toast('Saved wigglegram.gif. It holds each frame ' + real + 'ms \u2014 the GIF format works in 10ms steps.');
+    offerShareQuiet(saved);
+  } else offerShare(saved);
 }
 
 /* ================================================================
@@ -1814,42 +1817,73 @@ async function exportVideo(){
   await done;
   prog.close();
   const ext = mime.includes('mp4') ? 'mp4' : 'webm';
-  await save(new Blob(chunks, {type: mime}), 'wigglegram.' + ext);
-  if(ext === 'webm') toast('Saved as WebM — this browser has no MP4 recorder. Chrome will give you MP4.');
+  const saved = save(new Blob(chunks, {type: mime}), 'wigglegram.' + ext);
+  if(ext === 'webm'){
+    toast('Saved as WebM — this browser has no MP4 recorder. Chrome will give you MP4.');
+    offerShareQuiet(saved);
+  } else offerShare(saved);
 }
 async function exportPngs(){
   if(!S.frames.length) return;
   const d = outDims();
   const cv = document.createElement('canvas'); cv.width = d.W; cv.height = d.H;
   const c = cv.getContext('2d');
+  const out = [];
   for(let i=0;i<S.order.length;i++){
     c.setTransform(1,0,0,1,0,0);
     renderOut(c, d, S.order[i]);
     const blob = await new Promise(r => cv.toBlob(r, 'image/png'));
-    await save(blob, 'wiggle-' + String(i+1).padStart(2,'0') + '.png');
+    out.push(save(blob, 'wiggle-' + String(i+1).padStart(2,'0') + '.png'));
     await new Promise(r => setTimeout(r, 250));
   }
-  toast('Saved ' + S.order.length + ' aligned frames.');
+  offerShare(out);
 }
 /* On a phone a download lands somewhere awkward, so offer the share sheet
    first: that is the route to Photos, Messages or an upload. Falls back to a
    normal download wherever sharing files is not supported. */
-async function save(blob, name){
-  if(mobile() && navigator.canShare){
-    try{
-      const file = new File([blob], name, {type: blob.type});
-      if(navigator.canShare({files:[file]})){
-        await navigator.share({files:[file], title:'Wigglegram'});
-        return;
-      }
-    }catch(err){
-      if(err && err.name === 'AbortError') return;   // the user dismissed it
-    }
-  }
+/* Export means save. The button says "Export GIF", so it writes a file;
+   sharing is a different intent and gets its own button afterwards. */
+function save(blob, name){
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob); a.download = name;
   document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(()=>URL.revokeObjectURL(a.href), 8000);
+  setTimeout(()=>URL.revokeObjectURL(a.href), 20000);
+  return {blob, name};
+}
+
+/* Offered after a save, so the file exists either way. On a phone this is
+   the route to Photos or Messages; on a desktop the share sheet usually
+   isn't there and the bar just confirms the save. */
+function offerShareQuiet(items){
+  const list = [].concat(items).filter(Boolean);
+  let files = null;
+  try{ files = list.map(i => new File([i.blob], i.name, {type:i.blob.type || ''})); }catch(_){ return; }
+  if(!(navigator.canShare && navigator.canShare({files}))) return;
+  showBar('', 'Share', async () => {
+    try{ await navigator.share({files, title:'Wigglegram'}); }
+    catch(err){ if(err && err.name !== 'AbortError') toast('Sharing failed: ' + err.message); }
+  });
+  $('appbarMsg').textContent = 'Saved ' + (list.length === 1 ? list[0].name : list.length + ' files') + '.';
+}
+function offerShare(items){
+  const list = [].concat(items).filter(Boolean);
+  if(!list.length) return;
+  const label = list.length === 1 ? list[0].name : list.length + ' frames';
+  let files = null;
+  try{
+    files = list.map(i => new File([i.blob], i.name, {type: i.blob.type || 'application/octet-stream'}));
+  }catch(_){ files = null; }
+
+  const canShare = files && navigator.canShare && navigator.canShare({files});
+  if(!canShare){ toast('Saved ' + label + '.'); return; }
+
+  showBar('Saved ' + label + '.', 'Share', async () => {
+    try{
+      await navigator.share({files, title:'Wigglegram'});
+    }catch(err){
+      if(err && err.name !== 'AbortError') toast('Sharing failed: ' + err.message);
+    }
+  });
 }
 
 /* ================================================================
