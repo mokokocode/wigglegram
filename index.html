@@ -6,7 +6,18 @@
 <title>Wigglegram Bench</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" media="print" onload="this.media='all';this.onload=null"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap">
+<noscript><link rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap"></noscript>
+<link rel="manifest" href="./manifest.webmanifest">
+<meta name="theme-color" content="#FDC800">
+<link rel="icon" href="./favicon-64.png" sizes="64x64" type="image/png">
+<link rel="apple-touch-icon" href="./icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Wigglegram">
+<meta name="mobile-web-app-capable" content="yes">
 <style>
 :root{
   --yellow:#FDC800;
@@ -226,6 +237,15 @@ label.btn{display:inline-block}
   border-right:3px solid var(--ink);transition:width .12s linear}
 .card p{font-size:15px;margin:0}
 
+.appbar{
+  position:fixed;left:16px;right:16px;bottom:24px;z-index:70;
+  display:flex;align-items:center;gap:12px;
+  background:var(--surface);border:3px solid var(--ink);box-shadow:var(--sh);
+  padding:12px 16px;font-size:13px;font-weight:600}
+.appbar.hide{display:none}
+.appbar span{flex:1;min-width:0}
+.appbar .btn{flex:none}
+body.mob .appbar{bottom:calc(var(--sheet) + var(--tabbar) + 16px);left:8px;right:8px}
 .toast{
   position:fixed;left:50%;bottom:24px;transform:translateX(-50%);
   background:var(--yellow);border:3px solid var(--ink);box-shadow:var(--sh);
@@ -646,6 +666,11 @@ body.mob .pinhint{top:8px}
   </nav>
 </div>
 <div class="scrim" id="scrim"></div>
+<div class="appbar hide" id="appbar">
+  <span id="appbarMsg"></span>
+  <button class="btn go" id="appbarGo"></button>
+  <button class="btn" id="appbarNo" aria-label="Dismiss">✕</button>
+</div>
 
 <script>
 "use strict";
@@ -2258,6 +2283,90 @@ setMode(true);   // mobile layout is the default
 sizeStage();
 setTab('align');
 requestAnimationFrame(raf);
+
+/* ================================================================
+   offline + install
+   Every part of this tool already runs locally, so caching the shell
+   is the entire offline story. No data layer, nothing to reconcile.
+   ================================================================ */
+function showBar(msg, action, onGo){
+  $('appbarMsg').textContent = msg;
+  $('appbarGo').textContent = action;
+  $('appbar').classList.remove('hide');
+  $('appbarGo').onclick = () => { $('appbar').classList.add('hide'); onGo(); };
+  $('appbarNo').onclick = () => $('appbar').classList.add('hide');
+}
+
+// Photos shared to the app from the OS land in a cache the worker fills.
+async function takeSharedFrames(){
+  const n = parseInt(new URLSearchParams(location.search).get('shared') || '0', 10);
+  history.replaceState(null, '', location.pathname);   // don't re-import on reload
+  if(!n || !('caches' in window)) return;
+  try{
+    const c = await caches.open('shared-inbox');
+    const keys = await c.keys();
+    if(!keys.length){ toast('Those photos didn’t come through. Try Add instead.'); return; }
+    keys.sort((a,b) => a.url.localeCompare(b.url, undefined, {numeric:true}));
+    const files = [];
+    for(const k of keys){
+      const res = await c.match(k);
+      if(!res) continue;
+      const blob = await res.blob();
+      const name = decodeURIComponent(k.url.split('/').pop());
+      files.push(new File([blob], name, {type: blob.type || 'image/jpeg'}));
+    }
+    await Promise.all(keys.map(k => c.delete(k)));
+    if(files.length) loadFiles(files);
+  }catch(err){ console.warn('[share] ' + err.message); }
+}
+
+if('serviceWorker' in navigator && location.protocol.startsWith('http')){
+  window.addEventListener('load', async () => {
+    try{
+      const reg = await navigator.serviceWorker.register('./sw.js', {scope:'./'});
+
+      // A worker already waiting means a newer build is sitting there.
+      const offer = w => showBar('A new version is ready.', 'Reload', () => {
+        w.postMessage('skip-waiting');
+      });
+      if(reg.waiting) offer(reg.waiting);
+      reg.addEventListener('updatefound', () => {
+        const w = reg.installing;
+        if(!w) return;
+        w.addEventListener('statechange', () => {
+          // controller present means this is an update, not a first install
+          if(w.state === 'installed' && navigator.serviceWorker.controller) offer(w);
+        });
+      });
+      let reloading = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if(reloading) return;
+        reloading = true;
+        location.reload();
+      });
+    }catch(err){ console.warn('[sw] registration failed:', err.message); }
+  });
+}
+
+// Chrome fires this instead of installing straight away; hold it until the
+// user has frames loaded, when the offer actually means something.
+let installPrompt = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  installPrompt = e;
+});
+function maybeOfferInstall(){
+  if(!installPrompt || S.frames.length < 2) return;
+  if(matchMedia('(display-mode: standalone)').matches) return;
+  const p = installPrompt; installPrompt = null;
+  showBar('Install this to use it offline.', 'Install', async () => {
+    p.prompt();
+    try{ await p.userChoice; }catch(_){}
+  });
+}
+window.addEventListener('appinstalled', () => { installPrompt = null; });
+
+takeSharedFrames();
 </script>
 </body>
 </html>
